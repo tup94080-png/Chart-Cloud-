@@ -24,11 +24,14 @@
       <button onclick="switchTab('chats')" id="tab-chats" class="text-indigo-400 border-b-2 border-indigo-500 pb-1">Chats</button>
       <button onclick="switchTab('discovery')" id="tab-discovery" class="text-slate-400 hover:text-slate-200 pb-1">Discovery</button>
       <button onclick="switchTab('settings')" id="tab-settings" class="text-slate-400 hover:text-slate-200 pb-1">Settings & Item</button>
-      <button onclick="switchTab('admin')" id="tab-admin" class="text-rose-400 hover:text-rose-300 pb-1 hidden">Admin Panel</button>
+      <button onclick="switchTab('admin')" id="tab-admin" class="text-rose-400 hover:text-rose-300 pb-1 hidden flex items-center gap-1">
+        <i class="fas fa-shield-alt text-xs"></i> Admin Panel
+      </button>
     </nav>
 
     <!-- User Permanent Profile Header Summary -->
     <div id="user-pill" class="hidden items-center space-x-3">
+      <span id="admin-badge" class="hidden text-[10px] bg-rose-500/20 text-rose-400 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Admin</span>
       <img id="header-avatar" class="w-8 h-8 rounded-full object-cover border border-indigo-400" src="https://via.placeholder.com/32" alt="Permanent Avatar"/>
       <span id="header-username" class="text-sm font-semibold text-slate-200"></span>
     </div>
@@ -73,7 +76,7 @@
 
         <!-- Google Sign-In Button Container -->
         <div class="pt-4 border-t border-slate-800 flex flex-col items-center space-y-2">
-          <p class="text-xs text-slate-400">Or sign in with Google</p>
+          <p class="text-xs text-slate-400">Or sign in with Google (Admin Detection)</p>
           <div id="g_id_onload"
                data-client_id="185612219987-bv36avu42dfto4v4pvjn73ph6t6m25jh.apps.googleusercontent.com"
                data-callback="handleCredentialResponse">
@@ -198,18 +201,79 @@
     <!-- ------------------------------------------------------------- -->
     <section id="view-admin" class="h-full p-6 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-6">
-        <h2 class="text-xl font-bold text-rose-400">Admin Dashboard</h2>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <h2 class="text-xl font-bold text-rose-400 flex items-center gap-2">
+            <i class="fas fa-shield-alt"></i> Admin Dashboard
+          </h2>
+          <span class="text-xs bg-rose-500/10 text-rose-400 border border-rose-500/30 px-3 py-1 rounded-full font-semibold">Full Privileges Active</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl">
+            <p class="text-xs text-slate-400">System Status</p>
+            <p class="text-lg font-bold text-emerald-400 mt-1">Operational</p>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl">
+            <p class="text-xs text-slate-400">Admin Account</p>
+            <p id="admin-email-display" class="text-sm font-semibold text-indigo-400 mt-1 truncate">Not Signed In</p>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl">
+            <p class="text-xs text-slate-400">Moderation Tools</p>
+            <p class="text-xs text-slate-300 mt-1">Delete messages, remove 24h story items, and manage users.</p>
+          </div>
+        </div>
       </div>
     </section>
 
   </main>
 
   <script>
+    // -----------------------------------------------------------------
+    // EDIT THIS EMAIL TO YOUR GOOGLE EMAIL ADDRESS FOR ADMIN ACCESS
+    // -----------------------------------------------------------------
+    const ADMIN_EMAIL = "scinetixapp@gmail.com"; 
+
     const GOOGLE_CLIENT_ID = "185612219987-bv36avu42dfto4v4pvjn73ph6t6m25jh.apps.googleusercontent.com";
     let currentUser = null;
     let registeredUsernames = ['alex', 'user1'];
     let permanentAvatarData = 'https://via.placeholder.com/32';
     let selectedChatMedia = null;
+
+    // Load saved user session on page startup/refresh
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedUser = localStorage.getItem('chatCloudUser');
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          activateUserSession();
+        } catch(e) {
+          localStorage.removeItem('chatCloudUser');
+        }
+      }
+    });
+
+    function saveUserSession(user) {
+      currentUser = user;
+      localStorage.setItem('chatCloudUser', JSON.stringify(user));
+      activateUserSession();
+    }
+
+    function activateUserSession() {
+      if (!currentUser) return;
+      document.getElementById('header-username').innerText = currentUser.username;
+      document.getElementById('header-avatar').src = currentUser.picture || permanentAvatarData;
+      document.getElementById('user-pill').classList.remove('hidden');
+      document.getElementById('user-pill').classList.add('flex');
+      document.getElementById('auth-modal').classList.add('hidden');
+
+      // Grant Admin View if User is Admin
+      if (currentUser.isAdmin) {
+        document.getElementById('tab-admin').classList.remove('hidden');
+        document.getElementById('admin-badge').classList.remove('hidden');
+        const adminDisplay = document.getElementById('admin-email-display');
+        if (adminDisplay) adminDisplay.innerText = currentUser.email || currentUser.username;
+      }
+    }
 
     function handleCredentialResponse(response) {
       const base64Url = response.credential.split('.')[1];
@@ -219,19 +283,18 @@
       ).join(''));
       
       const payload = JSON.parse(jsonPayload);
+      const userEmail = (payload.email || "").toLowerCase();
       
-      currentUser = { 
+      const isAdminUser = (userEmail === ADMIN_EMAIL.toLowerCase());
+
+      const user = { 
         username: payload.name || payload.email.split('@')[0], 
         email: payload.email,
         picture: payload.picture || permanentAvatarData,
-        isAdmin: payload.email === 'admin@example.com'
+        isAdmin: isAdminUser
       };
 
-      document.getElementById('header-username').innerText = currentUser.username;
-      document.getElementById('header-avatar').src = currentUser.picture;
-      document.getElementById('user-pill').classList.remove('hidden');
-      document.getElementById('user-pill').classList.add('flex');
-      document.getElementById('auth-modal').classList.add('hidden');
+      saveUserSession(user);
     }
 
     function handleJoin(event) {
@@ -245,17 +308,14 @@
       }
 
       errorMsg.classList.add('hidden');
-      currentUser = { 
+      const user = { 
         username: usernameInput, 
+        email: null,
         picture: permanentAvatarData,
         isAdmin: usernameInput.toLowerCase() === 'admin' 
       };
 
-      document.getElementById('header-username').innerText = currentUser.username;
-      document.getElementById('header-avatar').src = currentUser.picture;
-      document.getElementById('user-pill').classList.remove('hidden');
-      document.getElementById('user-pill').classList.add('flex');
-      document.getElementById('auth-modal').classList.add('hidden');
+      saveUserSession(user);
     }
 
     function previewAvatar(event) {
@@ -318,6 +378,7 @@
     }
 
     function signOut() {
+      localStorage.removeItem('chatCloudUser');
       location.reload();
     }
   </script>
@@ -346,231 +407,4 @@
     window.setReplyTo = function(sender, text) {
       activeReply = { sender, text };
       document.getElementById('reply-to-user').innerText = `Replying to ${sender}`;
-      document.getElementById('reply-to-text').innerText = text;
-      document.getElementById('reply-preview-bar').classList.remove('hidden');
-      document.getElementById('chat-input').focus();
-    };
-
-    window.cancelReply = function() {
-      activeReply = null;
-      document.getElementById('reply-preview-bar').classList.add('hidden');
-    };
-
-    window.sendTextMessage = function() {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      
-      if (!text && !selectedChatMedia) return;
-
-      const sender = currentUser ? currentUser.username : "Guest";
-      const avatar = currentUser ? currentUser.picture : "https://via.placeholder.com/32";
-
-      const messagePayload = {
-        sender: sender,
-        avatar: avatar,
-        text: text,
-        timestamp: Date.now()
-      };
-
-      if (selectedChatMedia) {
-        messagePayload.media = {
-          data: selectedChatMedia.data,
-          type: selectedChatMedia.type,
-          openedAt: null
-        };
-      }
-
-      if (activeReply) {
-        messagePayload.replyTo = activeReply;
-      }
-
-      const messagesRef = ref(database, 'messages');
-      push(messagesRef, messagePayload);
-
-      input.value = '';
-      clearAttachment();
-      cancelReply();
-    };
-
-    window.openMedia = function(msgKey) {
-      const now = Date.now();
-      const mediaRef = ref(database, `messages/${msgKey}`);
-      update(mediaRef, { "media/openedAt": now });
-    };
-
-    // 24-Hour Item Publishing Function
-    window.publishStoryItem = function() {
-      const fileInput = document.getElementById('story-item-upload');
-      const file = fileInput.files[0];
-      if (!file) {
-        alert("Please select a file first.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const itemPayload = {
-          sender: currentUser ? currentUser.username : "Guest",
-          avatar: currentUser ? currentUser.picture : "https://via.placeholder.com/32",
-          mediaData: e.target.result,
-          mediaType: file.type.startsWith('video/') ? 'video' : 'image',
-          createdAt: Date.now()
-        };
-
-        const discoveryRef = ref(database, 'discoveryItems');
-        push(discoveryRef, itemPayload);
-        fileInput.value = '';
-        alert("24-Hour Story Item published to Discovery!");
-        switchTab('discovery');
-      };
-      reader.readAsDataURL(file);
-    };
-
-    // Listen and Render Realtime Chat Messages
-    const messagesRef = ref(database, 'messages');
-    onChildAdded(messagesRef, (snapshot) => {
-      const msgKey = snapshot.key;
-      const msg = snapshot.val();
-      const history = document.getElementById('chat-history');
-
-      // Check 30-minute self-destruct state
-      if (msg.media && msg.media.openedAt) {
-        const elapsedMinutes = (Date.now() - msg.media.openedAt) / (1000 * 60);
-        if (elapsedMinutes >= 30) {
-          remove(ref(database, `messages/${msgKey}`));
-          return;
-        }
-      }
-
-      const msgDiv = document.createElement('div');
-      msgDiv.id = `msg-${msgKey}`;
-      
-      const isMe = currentUser && msg.sender === currentUser.username;
-      msgDiv.className = `flex space-x-2 my-2 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`;
-      
-      const formattedTime = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      
-      let replyHTML = '';
-      if (msg.replyTo) {
-        replyHTML = `
-          <div class="bg-slate-950/60 border-l-2 border-indigo-400 p-2 rounded text-xs mb-1">
-            <span class="font-semibold text-indigo-300">${msg.replyTo.sender}</span>
-            <p class="text-slate-300 truncate">${msg.replyTo.text}</p>
-          </div>
-        `;
-      }
-
-      let mediaHTML = '';
-      if (msg.media) {
-        if (!msg.media.openedAt) {
-          mediaHTML = `
-            <div onclick="openMedia('${msgKey}')" class="cursor-pointer bg-slate-950/80 border border-indigo-500/40 p-3 rounded-xl flex items-center space-x-3 hover:bg-slate-950 transition mb-2">
-              <i class="fas fa-fire text-amber-400 text-lg"></i>
-              <div>
-                <p class="text-xs font-semibold text-indigo-300">View ${msg.media.type === 'video' ? 'Video' : 'Photo'}</p>
-                <p class="text-[10px] text-slate-400">Click to view • Self-destructs 30m after opening</p>
-              </div>
-            </div>
-          `;
-        } else {
-          const remainingMins = Math.max(0, Math.floor(30 - ((Date.now() - msg.media.openedAt) / (1000 * 60))));
-          
-          if (msg.media.type === 'video') {
-            mediaHTML = `
-              <div class="mb-2">
-                <video src="${msg.media.data}" controls class="rounded-xl max-w-xs max-h-60 border border-slate-700"></video>
-                <p class="text-[10px] text-amber-400 mt-1"><i class="fas fa-clock"></i> Expires in ${remainingMins}m</p>
-              </div>
-            `;
-          } else {
-            mediaHTML = `
-              <div class="mb-2">
-                <img src="${msg.media.data}" class="rounded-xl max-w-xs max-h-60 object-cover border border-slate-700">
-                <p class="text-[10px] text-amber-400 mt-1"><i class="fas fa-clock"></i> Expires in ${remainingMins}m</p>
-              </div>
-            `;
-          }
-        }
-      }
-
-      const bgClass = isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none';
-      const senderAvatar = msg.avatar || 'https://via.placeholder.com/32';
-
-      msgDiv.innerHTML = `
-        <img src="${senderAvatar}" class="w-7 h-7 rounded-full object-cover mt-1">
-        <div class="flex flex-col max-w-xs sm:max-w-md ${isMe ? 'items-end' : 'items-start'}">
-          <div class="flex items-center space-x-2 text-[10px] text-slate-400 mb-1">
-            <span>${msg.sender}</span>
-            <span>•</span>
-            <span>${formattedTime}</span>
-          </div>
-          <div class="relative group">
-            <div class="${bgClass} text-sm p-3 rounded-2xl shadow">
-              ${replyHTML}
-              ${mediaHTML}
-              ${msg.text ? `<p>${msg.text}</p>` : ''}
-            </div>
-            <button onclick="setReplyTo('${msg.sender.replace(/'/g, "\\'")}', '${(msg.text || 'Media Attachment').replace(/'/g, "\\'")}')" 
-                    class="absolute top-1/2 -translate-y-1/2 ${isMe ? '-left-7' : '-right-7'} opacity-0 group-hover:opacity-100 transition text-slate-400 hover:text-indigo-400 p-1">
-              <i class="fas fa-reply text-xs"></i>
-            </button>
-          </div>
-        </div>
-      `;
-      
-      history.appendChild(msgDiv);
-      history.scrollTop = history.scrollHeight;
-    });
-
-    // Listen and Render Realtime 24-Hour Discovery Feed
-    const discoveryRef = ref(database, 'discoveryItems');
-    onValue(discoveryRef, (snapshot) => {
-      const grid = document.getElementById('discovery-grid');
-      grid.innerHTML = '';
-      const now = Date.now();
-      const items = snapshot.val();
-
-      if (!items) {
-        grid.innerHTML = `<div class="text-slate-500 text-xs col-span-full">No active 24-hour items available.</div>`;
-        return;
-      }
-
-      Object.keys(items).forEach(key => {
-        const item = items[key];
-        const elapsedHours = (now - item.createdAt) / (1000 * 60 * 60);
-
-        // Auto-delete item if older than 24 hours
-        if (elapsedHours >= 24) {
-          remove(ref(database, `discoveryItems/${key}`));
-          return;
-        }
-
-        const remainingHours = Math.max(1, Math.floor(24 - elapsedHours));
-
-        let contentHTML = item.mediaType === 'video'
-          ? `<video src="${item.mediaData}" controls class="w-full h-48 object-cover rounded-lg border border-slate-800"></video>`
-          : `<img src="${item.mediaData}" class="w-full h-48 object-cover rounded-lg border border-slate-800">`;
-
-        const itemCard = document.createElement('div');
-        itemCard.className = 'bg-slate-950 border border-slate-800 rounded-xl overflow-hidden p-4 space-y-4';
-        itemCard.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <img src="${item.avatar || 'https://via.placeholder.com/32'}" class="w-8 h-8 rounded-full border border-indigo-500 object-cover">
-              <span class="font-semibold text-sm">${item.sender}</span>
-            </div>
-            <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full font-medium">
-              Expires in ~${remainingHours}h
-            </span>
-          </div>
-          <div class="relative">
-            ${contentHTML}
-          </div>
-        `;
-
-        grid.appendChild(itemCard);
-      });
-    });
-  </script>
-</body>
-</html>
+      document.getElementById(                      
