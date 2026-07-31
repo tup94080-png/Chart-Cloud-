@@ -40,9 +40,7 @@
   <!-- Main View Container -->
   <main class="flex-1 overflow-hidden relative">
 
-    <!-- ------------------------------------------------------------- -->
-    <!-- VIEW 1: JOIN / AUTH MODAL (Identity Creation)                 -->
-    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 1: JOIN / AUTH MODAL -->
     <section id="auth-modal" class="absolute inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4">
       <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6">
         <h2 class="text-2xl font-bold text-center text-indigo-400">Join ChatCloud</h2>
@@ -86,9 +84,7 @@
       </div>
     </section>
 
-    <!-- ------------------------------------------------------------- -->
-    <!-- VIEW 2: CHATS TAB (Direct Text & Self-Destructing Media)      -->
-    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 2: CHATS TAB -->
     <section id="view-chats" class="h-full flex">
       <!-- Chat Sidebar -->
       <aside class="w-80 border-r border-slate-800 flex flex-col bg-slate-950">
@@ -96,7 +92,6 @@
           <input type="text" placeholder="Search direct messages..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs focus:outline-none">
         </div>
         <div id="chat-list" class="flex-1 overflow-y-auto divide-y divide-slate-800/50">
-          <!-- Active Conversation -->
           <div class="p-4 flex items-center space-x-3 hover:bg-slate-900 cursor-pointer transition">
             <div class="relative">
               <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-sm">G</div>
@@ -160,9 +155,7 @@
       </div>
     </section>
 
-    <!-- ------------------------------------------------------------- -->
-    <!-- VIEW 3: DISCOVERY TAB (24h Expiring Active Items)            -->
-    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 3: DISCOVERY TAB -->
     <section id="view-discovery" class="h-full p-6 overflow-y-auto hidden">
       <div class="max-w-5xl mx-auto space-y-6">
         <h2 class="text-xl font-bold">Discovery Feed (24-Hour Active Items)</h2>
@@ -172,14 +165,11 @@
       </div>
     </section>
 
-    <!-- ------------------------------------------------------------- -->
-    <!-- VIEW 4: SETTINGS & 24H ITEM UPLOAD                            -->
-    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 4: SETTINGS & 24H ITEM UPLOAD -->
     <section id="view-settings" class="h-full p-6 overflow-y-auto hidden">
       <div class="max-w-xl mx-auto space-y-8">
         <h2 class="text-xl font-bold border-b border-slate-800 pb-3">Settings & 24h Item</h2>
 
-        <!-- Separate 24-Hour Active Item Upload -->
         <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4">
           <h3 class="font-semibold text-sm text-indigo-400">Post a 24-Hour Active Story Item</h3>
           <p class="text-xs text-slate-400">Upload a single file/image/video to Discovery. This story item automatically vanishes after 24 hours without affecting your permanent profile picture.</p>
@@ -196,9 +186,7 @@
       </div>
     </section>
 
-    <!-- ------------------------------------------------------------- -->
-    <!-- VIEW 5: ADMIN MONITORING PANEL                                 -->
-    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 5: ADMIN MONITORING PANEL -->
     <section id="view-admin" class="h-full p-6 overflow-y-auto hidden">
       <div class="max-w-6xl mx-auto space-y-6">
         <div class="flex items-center justify-between border-b border-slate-800 pb-4">
@@ -228,18 +216,13 @@
   </main>
 
   <script>
-    // -----------------------------------------------------------------
-    // EDIT THIS EMAIL TO YOUR GOOGLE EMAIL ADDRESS FOR ADMIN ACCESS
-    // -----------------------------------------------------------------
     const ADMIN_EMAIL = "scinetixapp@gmail.com"; 
-
     const GOOGLE_CLIENT_ID = "185612219987-bv36avu42dfto4v4pvjn73ph6t6m25jh.apps.googleusercontent.com";
     let currentUser = null;
     let registeredUsernames = ['alex', 'user1'];
     let permanentAvatarData = 'https://via.placeholder.com/32';
     let selectedChatMedia = null;
 
-    // Load saved user session on page startup/refresh
     window.addEventListener('DOMContentLoaded', () => {
       const savedUser = localStorage.getItem('chatCloudUser');
       if (savedUser) {
@@ -266,7 +249,6 @@
       document.getElementById('user-pill').classList.add('flex');
       document.getElementById('auth-modal').classList.add('hidden');
 
-      // Grant Admin View if User is Admin
       if (currentUser.isAdmin) {
         document.getElementById('tab-admin').classList.remove('hidden');
         document.getElementById('admin-badge').classList.remove('hidden');
@@ -284,7 +266,6 @@
       
       const payload = JSON.parse(jsonPayload);
       const userEmail = (payload.email || "").toLowerCase();
-      
       const isAdminUser = (userEmail === ADMIN_EMAIL.toLowerCase());
 
       const user = { 
@@ -344,7 +325,7 @@
           type: file.type.startsWith('video/') ? 'video' : 'image',
           name: file.name
         };
-        document.getElementById('attachment-name').innerText = `Attached: ${file.name} (View Once / 30m Auto-Delete)`;
+        document.getElementById('attachment-name').innerText = `Attached: ${file.name}`;
         document.getElementById('attachment-badge').classList.remove('hidden');
         document.getElementById('attachment-badge').classList.add('flex');
       };
@@ -383,14 +364,15 @@
     }
   </script>
 
+  <!-- FIREBASE MODULE SCRIPT -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-analytics.js";
-    import { getDatabase, ref, push, onChildAdded, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-database.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDQybFJ3Ll9SqA8kr5LPnllIH5l1xOVFXY",
       authDomain: "chart-cloud-75211.firebaseapp.com",
+      databaseURL: "https://chart-cloud-75211-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "chart-cloud-75211",
       storageBucket: "chart-cloud-75211.firebasestorage.app",
       messagingSenderId: "551810551192",
@@ -399,7 +381,6 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
     const database = getDatabase(app);
 
     let activeReply = null;
@@ -407,4 +388,96 @@
     window.setReplyTo = function(sender, text) {
       activeReply = { sender, text };
       document.getElementById('reply-to-user').innerText = `Replying to ${sender}`;
-      document.getElementById(                      
+      document.getElementById('reply-to-text').innerText = text;
+      document.getElementById('reply-preview-bar').classList.remove('hidden');
+    };
+
+    window.cancelReply = function() {
+      activeReply = null;
+      document.getElementById('reply-preview-bar').classList.add('hidden');
+    };
+
+    window.sendTextMessage = function() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      
+      if (!text && !selectedChatMedia) return;
+      if (!currentUser) {
+        alert("Please join or sign in first!");
+        return;
+      }
+
+      const messagesRef = ref(database, 'messages');
+      const newMessage = {
+        sender: currentUser.username,
+        text: text,
+        avatar: currentUser.picture || permanentAvatarData,
+        timestamp: Date.now(),
+        replyTo: activeReply ? activeReply : null,
+        media: selectedChatMedia ? selectedChatMedia : null
+      };
+
+      push(messagesRef, newMessage)
+        .then(() => {
+          input.value = '';
+          clearAttachment();
+          cancelReply();
+        })
+        .catch((error) => {
+          console.error("Error sending message:", error);
+          alert("Failed to send message. Please check database rules.");
+        });
+    };
+
+    const messagesRef = ref(database, 'messages');
+    onChildAdded(messagesRef, (snapshot) => {
+      const msg = snapshot.val();
+      const msgId = snapshot.key;
+      renderChatMessage(msg, msgId);
+    });
+
+    function renderChatMessage(msg, msgId) {
+      const chatHistory = document.getElementById('chat-history');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = "flex space-x-3 items-start bg-slate-950/40 p-3 rounded-lg border border-slate-800/50";
+
+      let replyHtml = '';
+      if (msg.replyTo) {
+        replyHtml = `
+          <div class="border-l-2 border-indigo-500 pl-2 mb-1 text-xs text-slate-400">
+            <span class="font-semibold text-indigo-400">@${msg.replyTo.sender}:</span> ${msg.replyTo.text}
+          </div>`;
+      }
+
+      let mediaHtml = '';
+      if (msg.media) {
+        if (msg.media.type === 'image') {
+          mediaHtml = `<img src="${msg.media.data}" class="mt-2 max-w-xs rounded-lg border border-slate-700 max-h-48 object-cover" />`;
+        } else if (msg.media.type === 'video') {
+          mediaHtml = `<video src="${msg.media.data}" controls class="mt-2 max-w-xs rounded-lg border border-slate-700 max-h-48"></video>`;
+        }
+      }
+
+      msgDiv.innerHTML = `
+        <img src="${msg.avatar || permanentAvatarData}" class="w-8 h-8 rounded-full object-cover border border-slate-700" />
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-indigo-300">${msg.sender}</span>
+            <button onclick="setReplyTo('${msg.sender}', '${(msg.text || '').replace(/'/g, "\\'")}')" class="text-xs text-slate-500 hover:text-indigo-400">
+              <i class="fas fa-reply"></i>
+            </button>
+          </div>
+          ${replyHtml}
+          <p class="text-sm text-slate-200 break-words mt-0.5">${msg.text || ''}</p>
+          ${mediaHtml}
+        </div>
+      `;
+
+      chatHistory.appendChild(msgDiv);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+  </script>
+</body>
+</html>
+
+ 
