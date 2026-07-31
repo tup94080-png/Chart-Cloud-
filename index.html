@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat Cloud - Modern Web App</title>
+  <!-- Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Tailwind CSS CDN for modern UI styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-950">
+    <div class="flex items-center space-x-3">
+      <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold">CC</div>
+      <h1 class="text-xl font-bold tracking-wide">ChatCloud</h1>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex space-x-6 text-sm font-medium">
+      <button onclick="switchTab('chats')" id="tab-chats" class="text-indigo-400 border-b-2 border-indigo-500 pb-1">Chats</button>
+      <button onclick="switchTab('discovery')" id="tab-discovery" class="text-slate-400 hover:text-slate-200 pb-1">Discovery</button>
+      <button onclick="switchTab('settings')" id="tab-settings" class="text-slate-400 hover:text-slate-200 pb-1">Settings & Item</button>
+      <button onclick="switchTab('admin')" id="tab-admin" class="text-rose-400 hover:text-rose-300 pb-1 hidden">Admin Panel</button>
+    </nav>
+
+    <!-- User Permanent Profile Header Summary -->
+    <div id="user-pill" class="hidden items-center space-x-3">
+      <img id="header-avatar" class="w-8 h-8 rounded-full object-cover border border-indigo-400" src="https://via.placeholder.com/32" alt="Permanent Avatar"/>
+      <span id="header-username" class="text-sm font-semibold text-slate-200"></span>
+    </div>
+  </header>
+
+  <!-- Main View Container -->
+  <main class="flex-1 overflow-hidden relative">
+
+    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 1: JOIN / AUTH MODAL (Identity Creation)                 -->
+    <!-- ------------------------------------------------------------- -->
+    <section id="auth-modal" class="absolute inset-0 bg-slate-950/90 z-50 flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6">
+        <h2 class="text-2xl font-bold text-center text-indigo-400">Join ChatCloud</h2>
+        
+        <form id="join-form" onsubmit="handleJoin(event)" class="space-y-4">
+          <!-- Permanent Avatar Upload -->
+          <div class="flex flex-col items-center space-y-2">
+            <div class="w-24 h-24 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center overflow-hidden bg-slate-800 relative">
+              <img id="avatar-preview" class="w-full h-full object-cover hidden" />
+              <i id="avatar-placeholder" class="fas fa-camera text-slate-400 text-2xl"></i>
+            </div>
+            <label class="text-xs text-indigo-400 hover:underline cursor-pointer">
+              Upload Permanent Profile Picture
+              <input type="file" id="input-avatar" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+            </label>
+          </div>
+
+          <!-- Desired Username -->
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Desired Username</label>
+            <input type="text" id="input-username" required placeholder="Enter unique username" 
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+            <p id="username-error" class="text-xs text-rose-500 mt-1 hidden">Username taken. Please pick another one.</p>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg text-sm transition">
+            Create Profile & Enter
+          </button>
+        </form>
+
+        <!-- Google Sign-In Button Container -->
+        <div class="pt-4 border-t border-slate-800 flex flex-col items-center space-y-2">
+          <p class="text-xs text-slate-400">Or sign in with Google</p>
+          <div id="g_id_onload"
+               data-client_id="185612219987-bv36avu42dfto4v4pvjn73ph6t6m25jh.apps.googleusercontent.com"
+               data-callback="handleCredentialResponse">
+          </div>
+          <div class="g_id_signin" data-type="standard"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 2: CHATS TAB (Direct Text & Self-Destructing Media)      -->
+    <!-- ------------------------------------------------------------- -->
+    <section id="view-chats" class="h-full flex">
+      <!-- Chat Sidebar -->
+      <aside class="w-80 border-r border-slate-800 flex flex-col bg-slate-950">
+        <div class="p-4 border-b border-slate-800">
+          <input type="text" placeholder="Search direct messages..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs focus:outline-none">
+        </div>
+        <div id="chat-list" class="flex-1 overflow-y-auto divide-y divide-slate-800/50">
+          <!-- Active Conversation -->
+          <div class="p-4 flex items-center space-x-3 hover:bg-slate-900 cursor-pointer transition">
+            <div class="relative">
+              <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-sm">G</div>
+              <div class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-slate-950"></div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold truncate">Global Chat Room</p>
+              <p class="text-xs text-slate-400 truncate">Live community conversation</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Active Chat Area -->
+      <div class="flex-1 flex flex-col bg-slate-900">
+        <!-- Chat Header -->
+        <div class="h-14 border-b border-slate-800 flex items-center justify-between px-6">
+          <div class="flex items-center space-x-3">
+            <span class="font-semibold text-sm">Global Chat Room</span>
+            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full">Live</span>
+          </div>
+        </div>
+
+        <!-- Chat History Window -->
+        <div id="chat-history" class="flex-1 p-6 overflow-y-auto space-y-4">
+          <div class="text-center text-xs text-slate-500 my-2">-- Live Realtime Chat --</div>
+        </div>
+
+        <!-- Reply Preview Banner -->
+        <div id="reply-preview-bar" class="hidden bg-slate-950 px-4 py-2 border-t border-slate-800 flex items-center justify-between">
+          <div class="border-l-4 border-indigo-500 pl-3 min-w-0">
+            <p id="reply-to-user" class="text-xs font-semibold text-indigo-400"></p>
+            <p id="reply-to-text" class="text-xs text-slate-300 truncate"></p>
+          </div>
+          <button onclick="cancelReply()" class="text-slate-400 hover:text-white px-2">
+            <i class="fas fa-times text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Text & Media Input Area -->
+        <div class="p-4 border-t border-slate-800 bg-slate-950 flex flex-col space-y-2">
+          <div id="attachment-badge" class="hidden items-center justify-between bg-slate-900 px-3 py-1.5 rounded-lg border border-indigo-500/30 text-xs">
+            <span id="attachment-name" class="text-indigo-300 truncate"></span>
+            <button onclick="clearAttachment()" class="text-slate-400 hover:text-rose-400 ml-2">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <label class="cursor-pointer text-slate-400 hover:text-indigo-400 transition p-2">
+              <i class="fas fa-paperclip text-lg"></i>
+              <input type="file" id="chat-media-input" accept="image/*,video/*" class="hidden" onchange="handleChatMediaSelect(event)">
+            </label>
+
+            <input type="text" id="chat-input" placeholder="Type a message..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-4 py-2 text-sm focus:outline-none" onkeydown="if(event.key==='Enter') sendTextMessage()">
+            <button onclick="sendTextMessage()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 3: DISCOVERY TAB (24h Expiring Active Items)            -->
+    <!-- ------------------------------------------------------------- -->
+    <section id="view-discovery" class="h-full p-6 overflow-y-auto hidden">
+      <div class="max-w-5xl mx-auto space-y-6">
+        <h2 class="text-xl font-bold">Discovery Feed (24-Hour Active Items)</h2>
+        <div id="discovery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="text-slate-500 text-xs col-span-full">Loading active items...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 4: SETTINGS & 24H ITEM UPLOAD                            -->
+    <!-- ------------------------------------------------------------- -->
+    <section id="view-settings" class="h-full p-6 overflow-y-auto hidden">
+      <div class="max-w-xl mx-auto space-y-8">
+        <h2 class="text-xl font-bold border-b border-slate-800 pb-3">Settings & 24h Item</h2>
+
+        <!-- Separate 24-Hour Active Item Upload -->
+        <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4">
+          <h3 class="font-semibold text-sm text-indigo-400">Post a 24-Hour Active Story Item</h3>
+          <p class="text-xs text-slate-400">Upload a single file/image/video to Discovery. This story item automatically vanishes after 24 hours without affecting your permanent profile picture.</p>
+          <input type="file" id="story-item-upload" accept="image/*,video/*" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500">
+          <button onclick="publishStoryItem()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-medium rounded-lg transition">Publish Item to Discovery</button>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 p-5 rounded-xl space-y-4">
+          <h3 class="font-semibold text-sm text-rose-400">Account Management</h3>
+          <div class="flex space-x-4">
+            <button onclick="signOut()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg font-medium">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------- -->
+    <!-- VIEW 5: ADMIN MONITORING PANEL                                 -->
+    <!-- ------------------------------------------------------------- -->
+    <section id="view-admin" class="h-full p-6 overflow-y-auto hidden">
+      <div class="max-w-6xl mx-auto space-y-6">
+        <h2 class="text-xl font-bold text-rose-400">Admin Dashboard</h2>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const GOOGLE_CLIENT_ID = "185612219987-bv36avu42dfto4v4pvjn73ph6t6m25jh.apps.googleusercontent.com";
+    let currentUser = null;
+    let registeredUsernames = ['alex', 'user1'];
+    let permanentAvatarData = 'https://via.placeholder.com/32';
+    let selectedChatMedia = null;
+
+    function handleCredentialResponse(response) {
+      const base64Url = response.credential.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
+      
+      const payload = JSON.parse(jsonPayload);
+      
+      currentUser = { 
+        username: payload.name || payload.email.split('@')[0], 
+        email: payload.email,
+        picture: payload.picture || permanentAvatarData,
+        isAdmin: payload.email === 'admin@example.com'
+      };
+
+      document.getElementById('header-username').innerText = currentUser.username;
+      document.getElementById('header-avatar').src = currentUser.picture;
+      document.getElementById('user-pill').classList.remove('hidden');
+      document.getElementById('user-pill').classList.add('flex');
+      document.getElementById('auth-modal').classList.add('hidden');
+    }
+
+    function handleJoin(event) {
+      event.preventDefault();
+      const usernameInput = document.getElementById('input-username').value.trim();
+      const errorMsg = document.getElementById('username-error');
+
+      if (registeredUsernames.includes(usernameInput.toLowerCase())) {
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+
+      errorMsg.classList.add('hidden');
+      currentUser = { 
+        username: usernameInput, 
+        picture: permanentAvatarData,
+        isAdmin: usernameInput.toLowerCase() === 'admin' 
+      };
+
+      document.getElementById('header-username').innerText = currentUser.username;
+      document.getElementById('header-avatar').src = currentUser.picture;
+      document.getElementById('user-pill').classList.remove('hidden');
+      document.getElementById('user-pill').classList.add('flex');
+      document.getElementById('auth-modal').classList.add('hidden');
+    }
+
+    function previewAvatar(event) {
+      const file = event.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          permanentAvatarData = e.target.result;
+          const img = document.getElementById('avatar-preview');
+          img.src = permanentAvatarData;
+          img.classList.remove('hidden');
+          document.getElementById('avatar-placeholder').classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function handleChatMediaSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        selectedChatMedia = {
+          data: e.target.result,
+          type: file.type.startsWith('video/') ? 'video' : 'image',
+          name: file.name
+        };
+        document.getElementById('attachment-name').innerText = `Attached: ${file.name} (View Once / 30m Auto-Delete)`;
+        document.getElementById('attachment-badge').classList.remove('hidden');
+        document.getElementById('attachment-badge').classList.add('flex');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearAttachment() {
+      selectedChatMedia = null;
+      document.getElementById('chat-media-input').value = '';
+      document.getElementById('attachment-badge').classList.add('hidden');
+      document.getElementById('attachment-badge').classList.remove('flex');
+    }
+
+    function switchTab(tabName) {
+      const tabs = ['chats', 'discovery', 'settings', 'admin'];
+      tabs.forEach(tab => {
+        const view = document.getElementById(`view-${tab}`);
+        const btn = document.getElementById(`tab-${tab}`);
+        if (view && btn) {
+          if (tab === tabName) {
+            view.classList.remove('hidden');
+            btn.classList.add('text-indigo-400', 'border-b-2', 'border-indigo-500');
+            btn.classList.remove('text-slate-400');
+          } else {
+            view.classList.add('hidden');
+            btn.classList.remove('text-indigo-400', 'border-b-2', 'border-indigo-500');
+            btn.classList.add('text-slate-400');
+          }
+        }
+      });
+    }
+
+    function signOut() {
+      location.reload();
+    }
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-analytics.js";
+    import { getDatabase, ref, push, onChildAdded, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQybFJ3Ll9SqA8kr5LPnllIH5l1xOVFXY",
+      authDomain: "chart-cloud-75211.firebaseapp.com",
+      projectId: "chart-cloud-75211",
+      storageBucket: "chart-cloud-75211.firebasestorage.app",
+      messagingSenderId: "551810551192",
+      appId: "1:551810551192:web:f058124fee9a2a771f2fed",
+      measurementId: "G-B2KBTXY3F7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const database = getDatabase(app);
+
+    let activeReply = null;
+
+    window.setReplyTo = function(sender, text) {
+      activeReply = { sender, text };
+      document.getElementById('reply-to-user').innerText = `Replying to ${sender}`;
+      document.getElementById('reply-to-text').innerText = text;
+      document.getElementById('reply-preview-bar').classList.remove('hidden');
+      document.getElementById('chat-input').focus();
+    };
+
+    window.cancelReply = function() {
+      activeReply = null;
+      document.getElementById('reply-preview-bar').classList.add('hidden');
+    };
+
+    window.sendTextMessage = function() {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      
+      if (!text && !selectedChatMedia) return;
+
+      const sender = currentUser ? currentUser.username : "Guest";
+      const avatar = currentUser ? currentUser.picture : "https://via.placeholder.com/32";
+
+      const messagePayload = {
+        sender: sender,
+        avatar: avatar,
+        text: text,
+        timestamp: Date.now()
+      };
+
+      if (selectedChatMedia) {
+        messagePayload.media = {
+          data: selectedChatMedia.data,
+          type: selectedChatMedia.type,
+          openedAt: null
+        };
+      }
+
+      if (activeReply) {
+        messagePayload.replyTo = activeReply;
+      }
+
+      const messagesRef = ref(database, 'messages');
+      push(messagesRef, messagePayload);
+
+      input.value = '';
+      clearAttachment();
+      cancelReply();
+    };
+
+    window.openMedia = function(msgKey) {
+      const now = Date.now();
+      const mediaRef = ref(database, `messages/${msgKey}`);
+      update(mediaRef, { "media/openedAt": now });
+    };
+
+    // 24-Hour Item Publishing Function
+    window.publishStoryItem = function() {
+      const fileInput = document.getElementById('story-item-upload');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert("Please select a file first.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const itemPayload = {
+          sender: currentUser ? currentUser.username : "Guest",
+          avatar: currentUser ? currentUser.picture : "https://via.placeholder.com/32",
+          mediaData: e.target.result,
+          mediaType: file.type.startsWith('video/') ? 'video' : 'image',
+          createdAt: Date.now()
+        };
+
+        const discoveryRef = ref(database, 'discoveryItems');
+        push(discoveryRef, itemPayload);
+        fileInput.value = '';
+        alert("24-Hour Story Item published to Discovery!");
+        switchTab('discovery');
+      };
+      reader.readAsDataURL(file);
+    };
+
+    // Listen and Render Realtime Chat Messages
+    const messagesRef = ref(database, 'messages');
+    onChildAdded(messagesRef, (snapshot) => {
+      const msgKey = snapshot.key;
+      const msg = snapshot.val();
+      const history = document.getElementById('chat-history');
+
+      // Check 30-minute self-destruct state
+      if (msg.media && msg.media.openedAt) {
+        const elapsedMinutes = (Date.now() - msg.media.openedAt) / (1000 * 60);
+        if (elapsedMinutes >= 30) {
+          remove(ref(database, `messages/${msgKey}`));
+          return;
+        }
+      }
+
+      const msgDiv = document.createElement('div');
+      msgDiv.id = `msg-${msgKey}`;
+      
+      const isMe = currentUser && msg.sender === currentUser.username;
+      msgDiv.className = `flex space-x-2 my-2 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`;
+      
+      const formattedTime = new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      let replyHTML = '';
+      if (msg.replyTo) {
+        replyHTML = `
+          <div class="bg-slate-950/60 border-l-2 border-indigo-400 p-2 rounded text-xs mb-1">
+            <span class="font-semibold text-indigo-300">${msg.replyTo.sender}</span>
+            <p class="text-slate-300 truncate">${msg.replyTo.text}</p>
+          </div>
+        `;
+      }
+
+      let mediaHTML = '';
+      if (msg.media) {
+        if (!msg.media.openedAt) {
+          mediaHTML = `
+            <div onclick="openMedia('${msgKey}')" class="cursor-pointer bg-slate-950/80 border border-indigo-500/40 p-3 rounded-xl flex items-center space-x-3 hover:bg-slate-950 transition mb-2">
+              <i class="fas fa-fire text-amber-400 text-lg"></i>
+              <div>
+                <p class="text-xs font-semibold text-indigo-300">View ${msg.media.type === 'video' ? 'Video' : 'Photo'}</p>
+                <p class="text-[10px] text-slate-400">Click to view • Self-destructs 30m after opening</p>
+              </div>
+            </div>
+          `;
+        } else {
+          const remainingMins = Math.max(0, Math.floor(30 - ((Date.now() - msg.media.openedAt) / (1000 * 60))));
+          
+          if (msg.media.type === 'video') {
+            mediaHTML = `
+              <div class="mb-2">
+                <video src="${msg.media.data}" controls class="rounded-xl max-w-xs max-h-60 border border-slate-700"></video>
+                <p class="text-[10px] text-amber-400 mt-1"><i class="fas fa-clock"></i> Expires in ${remainingMins}m</p>
+              </div>
+            `;
+          } else {
+            mediaHTML = `
+              <div class="mb-2">
+                <img src="${msg.media.data}" class="rounded-xl max-w-xs max-h-60 object-cover border border-slate-700">
+                <p class="text-[10px] text-amber-400 mt-1"><i class="fas fa-clock"></i> Expires in ${remainingMins}m</p>
+              </div>
+            `;
+          }
+        }
+      }
+
+      const bgClass = isMe ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none';
+      const senderAvatar = msg.avatar || 'https://via.placeholder.com/32';
+
+      msgDiv.innerHTML = `
+        <img src="${senderAvatar}" class="w-7 h-7 rounded-full object-cover mt-1">
+        <div class="flex flex-col max-w-xs sm:max-w-md ${isMe ? 'items-end' : 'items-start'}">
+          <div class="flex items-center space-x-2 text-[10px] text-slate-400 mb-1">
+            <span>${msg.sender}</span>
+            <span>•</span>
+            <span>${formattedTime}</span>
+          </div>
+          <div class="relative group">
+            <div class="${bgClass} text-sm p-3 rounded-2xl shadow">
+              ${replyHTML}
+              ${mediaHTML}
+              ${msg.text ? `<p>${msg.text}</p>` : ''}
+            </div>
+            <button onclick="setReplyTo('${msg.sender.replace(/'/g, "\\'")}', '${(msg.text || 'Media Attachment').replace(/'/g, "\\'")}')" 
+                    class="absolute top-1/2 -translate-y-1/2 ${isMe ? '-left-7' : '-right-7'} opacity-0 group-hover:opacity-100 transition text-slate-400 hover:text-indigo-400 p-1">
+              <i class="fas fa-reply text-xs"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      history.appendChild(msgDiv);
+      history.scrollTop = history.scrollHeight;
+    });
+
+    // Listen and Render Realtime 24-Hour Discovery Feed
+    const discoveryRef = ref(database, 'discoveryItems');
+    onValue(discoveryRef, (snapshot) => {
+      const grid = document.getElementById('discovery-grid');
+      grid.innerHTML = '';
+      const now = Date.now();
+      const items = snapshot.val();
+
+      if (!items) {
+        grid.innerHTML = `<div class="text-slate-500 text-xs col-span-full">No active 24-hour items available.</div>`;
+        return;
+      }
+
+      Object.keys(items).forEach(key => {
+        const item = items[key];
+        const elapsedHours = (now - item.createdAt) / (1000 * 60 * 60);
+
+        // Auto-delete item if older than 24 hours
+        if (elapsedHours >= 24) {
+          remove(ref(database, `discoveryItems/${key}`));
+          return;
+        }
+
+        const remainingHours = Math.max(1, Math.floor(24 - elapsedHours));
+
+        let contentHTML = item.mediaType === 'video'
+          ? `<video src="${item.mediaData}" controls class="w-full h-48 object-cover rounded-lg border border-slate-800"></video>`
+          : `<img src="${item.mediaData}" class="w-full h-48 object-cover rounded-lg border border-slate-800">`;
+
+        const itemCard = document.createElement('div');
+        itemCard.className = 'bg-slate-950 border border-slate-800 rounded-xl overflow-hidden p-4 space-y-4';
+        itemCard.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <img src="${item.avatar || 'https://via.placeholder.com/32'}" class="w-8 h-8 rounded-full border border-indigo-500 object-cover">
+              <span class="font-semibold text-sm">${item.sender}</span>
+            </div>
+            <span class="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full font-medium">
+              Expires in ~${remainingHours}h
+            </span>
+          </div>
+          <div class="relative">
+            ${contentHTML}
+          </div>
+        `;
+
+        grid.appendChild(itemCard);
+      });
+    });
+  </script>
+</body>
+</html>
